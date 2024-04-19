@@ -2,13 +2,12 @@
 # -*- coding: utf-8 -*-
 
 import os
-
 import rospy
 import smach
 import smach_ros
-# from hsrlib.hsrif import HSRInterfaces
 
-from state_machine import standard, guide, get_task, move
+from state_machine import standard
+from state_machine import pickup, recog_target_point, recognition, move, cleanup
 
 
 class InteractiveCleanupStateMachine():
@@ -16,7 +15,7 @@ class InteractiveCleanupStateMachine():
         """
         必要なモジュールを初期化
         """
-        self.start_state = rospy.get_param(rospy.get_name() + "/start_state", "Start")
+        self.start_state = rospy.get_param("~start_state", "Start")
 
         # ステートマシンの宣言
         self.sm = smach.StateMachine(outcomes=["exit"])
@@ -41,7 +40,7 @@ class InteractiveCleanupStateMachine():
             # Interactive cleanup
             smach.StateMachine.add(
                 "RecognizeTargetPoint",
-                get_task.GetTask(["move", "except"]),
+                recog_target_point.RecogTargetPoint(["move", "except"]),
                 transitions={
                     "move": "Move2Pickup",
                     "except": "Except",
@@ -49,16 +48,16 @@ class InteractiveCleanupStateMachine():
             )
             smach.StateMachine.add(
                 "Move2Pickup",
-                guide.GuideHuman(["pickup", "loop", "except"]),
+                move.Move(["next", "loop", "except"]),
                 transitions={
-                    "pickup": "Pickup",
+                    "next": "Pickup",
                     "loop": "Move2Pickup",
                     "except": "Except",
                 },
             )
             smach.StateMachine.add(
                 "Pickup",
-                guide.GuideHuman(["move", "loop", "except"]),
+                pickup.Pickup(["move", "loop", "except"]),
                 transitions={
                     "move": "Move2Cleanup",
                     "loop": "Pickup",
@@ -67,16 +66,16 @@ class InteractiveCleanupStateMachine():
             )
             smach.StateMachine.add(
                 "Move2Cleanup",
-                move.Move(["cleanup", "loop", "except"]),
+                move.Move(["next", "loop", "except"]),
                 transitions={
-                    "cleanup": "Cleanup",
+                    "next": "Cleanup",
                     "loop": "Move2Cleanup",
                     "except": "Except",
                 },
             )
             smach.StateMachine.add(
                 "Cleanup",
-                guide.GuideHuman(["success", "loop", "except"]),
+                cleanup.CleanUp(["success", "loop", "except"]),
                 transitions={
                     "success": "Finish",
                     "loop": "Cleanup",

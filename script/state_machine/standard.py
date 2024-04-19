@@ -12,7 +12,7 @@ from interactive_cleanup.msg import InteractiveCleanupMsg
 class Init(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel="INFO")
 
     def execute(self, userdata):
         return "next"
@@ -21,7 +21,7 @@ class Init(smach.State, Logger):
 class Wait4Start(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel="INFO")
 
     def wait_for_ready_msg(self, ready_msg="Are_you_ready?") -> None:
         """ready_for_messageの送信を待つ関数
@@ -31,6 +31,7 @@ class Wait4Start(smach.State, Logger):
         """
         self.loginfo(f"wait for ready message: {ready_msg}")
         while not rospy.is_shutdown():
+            break
             msg = rospy.wait_for_message("/interactive_cleanup/message/to_robot", InteractiveCleanupMsg, timeout=None)
             self.loginfo(msg.message)
             if msg.message == ready_msg:
@@ -47,7 +48,7 @@ class Wait4Start(smach.State, Logger):
 class Start(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel="INFO")
 
     def execute(self, userdata):
         self.loginfo("Start")
@@ -57,7 +58,7 @@ class Start(smach.State, Logger):
 class Finish(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel="INFO")
 
     def execute(self, userdata):
         self.loginfo("Finished")
@@ -67,7 +68,7 @@ class Finish(smach.State, Logger):
 class Except(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self)
+        Logger.__init__(self, loglevel="INFO")
 
     def execute(self, userdata):
         self.logerr("Excepted")

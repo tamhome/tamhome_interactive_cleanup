@@ -1,0 +1,21 @@
+<launch>
+
+    <arg name="start_state" default="Start" />
+    <arg name="map_path" default="$(find sigverse_hsrb_nav)/map/map.yaml" />
+    <arg name="use_map_topic" default="false" />
+    <arg name="use_map_server" default="true" />
+    <arg name="use_teleop" default="false" />
+    <arg name="debug" default="false" />
+    <arg name="use_rviz" default="false" />
+    <arg name="robot_name" default="hsrb4s" />
+    <arg name="upload_robot_model_launch" default="$(find hsrb_description)/robots/upload_hsrb.launch" />
+
+    <node name="state_machine" pkg="tamhome_interactive_cleanup" type="task_node.py" output="screen">
+        <param name="start_state" value="$(arg start_state)" />
+    </node>
+
+    <group if="$(arg use_rviz)">
+        <node name="rviz" pkg="rviz" type="rviz" args="-d $(find handyman)/config/interactive_cleanup.rviz" />
+    </group>
+
+</launch>
