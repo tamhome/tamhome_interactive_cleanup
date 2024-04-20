@@ -22,7 +22,7 @@ from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from tam_make_response.msg import MakeResponseAction, MakeResponseGoal, MakeResponseResult
 
 from std_srvs.srv import SetBool, SetBoolRequest
-from tam_grasp.srv import GraspPoseEstimationService, GraspPoseEstimationServiceRequest
+# from tam_grasp.srv import GraspPoseEstimationService, GraspPoseEstimationServiceRequest
 from tam_object_detection.srv import LangSamObjectDetectionService, LangSamObjectDetectionServiceRequest
 from tam_object_detection.srv import ObjectDetectionService, ObjectDetectionServiceRequest
 
@@ -30,7 +30,7 @@ from tam_object_detection.srv import ObjectDetectionService, ObjectDetectionServ
 class Pickup(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
-        Logger.__init__(self, loglevel="INFO")
+        Logger.__init__(self, loglevel="DEBUG")
 
         self.detection_type = rospy.get_param("~detection_type", "yolov8")
         self.grasp_from = rospy.get_param("~grasp_from", "floor")
@@ -40,7 +40,16 @@ class Pickup(smach.State, Logger):
         self.move_joints = MoveJoints()
 
         self.head_rgbd_frame = "head_rgbd_sensor_link"
+        self.base_frame = "odom"
         self.odom_frame = "odom"
+
+        self.loginfo("wait for object detection service start")
+        detection_service_name = "sigverse/hsr_head_rgbd/object_detection/service"
+        self.srv_detection = rospy.ServiceProxy(detection_service_name, ObjectDetectionService)
+        rospy.wait_for_service(detection_service_name, timeout=10)
+        self.loginfo("connected to object detection service")
+
+        self.loop_counter = 0
 
     def is_hand_collision(self, th=2.0) -> bool:
         """HSRのハンドが物体に衝突しているかどうかを判定する関数（実装途中）
@@ -51,7 +60,7 @@ class Pickup(smach.State, Logger):
 
     def grasp_failure(self, prompt="grasp, not_detected, give_me, white cup"):
         self.logwarn("detection failure")
-        return "failure"
+        return "loop"
 
     def contains_japanese(self, text):
         try:
@@ -95,17 +104,26 @@ class Pickup(smach.State, Logger):
         """
         # 現在のゴールを削除
         self.moveit.delete()
-        self.moveit.move_to_tf_target("target_frame")
-        target_object_name = "rabbit_doll"
+        target_object_name = "toy_penguin"
 
         # 首を下に向ける
+        self.move_joints.neutral()
+        rospy.sleep(4)
         self.move_joints.move_head(0, -0.4)
+        rospy.sleep(3)
 
         # object detection
         if self.detection_type == "yolov8":
-            det_req = ObjectDetectionServiceRequest(use_latest_image=True)
+            det_req = ObjectDetectionServiceRequest(
+                confidence_th=0.5,
+                iou_th=0.5,
+                max_distance=5.0,
+                use_latest_image=True,
+            )
+            self.logdebug(det_req)
 
             detections = self.srv_detection(det_req).detections
+            self.logdebug(detections)
             if detections.is_detected is False:
                 # userdata.grasp_failure = True
                 prompt = "grasp, not_detected, give_me, " + target_object_name
@@ -134,16 +152,16 @@ class Pickup(smach.State, Logger):
             open_angle = 1.2
             grasp_pose = Pose(
                 detections.pose[max_score_idx].position,
-                detections.pose[max_score_idx].orientation,
+                Quaternion(0, 0, 0, 1),
             )
 
-            grasp_pose_odom: Pose = self.tamtf.get_pose_with_offset(
-                target_frame=self.odom_frame,
+            grasp_pose_base: Pose = self.tamtf.get_pose_with_offset(
+                target_frame=self.base_frame,
                 source_frame=self.head_rgbd_frame,
-                offset=Pose(grasp_pose, Quaternion(0, 0, 0, 1)),
+                offset=grasp_pose,
             )
 
-            self.loginfo(grasp_pose_odom)
+            self.loginfo(grasp_pose_base)
 
             # self.loginfo(detections.pose[max_score_idx].frame_id)
 
@@ -233,9 +251,25 @@ class Pickup(smach.State, Logger):
 
         # 物体の中心位置にTFを発行し，その位置に移動
         self.move_joints.gripper(3.14)
-        grasp_pose_odom.orientation = euler2quaternion(0, -1.57, np.pi)
-        self.moveit.broadcast_tf(grasp_pose_odom.pose, grasp_pose_odom.orientation, "target_frame", self.odom_frame)
-        res = self.moveit.move_to_tf_target("target_frame")
+
+        # 把持前の姿勢に移動
+        grasp_pose_base_pre = grasp_pose_base
+        grasp_pose_base_pre.position.z = grasp_pose_base.position.z + 0.1
+        grasp_pose_base_pre.orientation = euler2quaternion(0, -1.57, np.pi)
+        res = self.moveit.move_to_pose(grasp_pose_base_pre, self.base_frame)
+        rospy.sleep(2)
+
+        # 把持姿勢に遷移
+        grasp_pose_base_second = grasp_pose_base_pre
+        grasp_pose_base_second.position.z = grasp_pose_base_pre.position.z - 0.1
+        res = self.moveit.move_to_pose(grasp_pose_base_second, self.base_frame)
+        rospy.sleep(4)
+
+        # 把持
+        self.move_joints.gripper(0)
+        rospy.sleep(4)
+        self.move_joints.move_arm_by_line(+0.03, "arm_lift_joint")
+        rospy.sleep(4)
         self.move_joints.gripper(0)
 
         # res = self.hsrif.whole_body.move_end_effector_pose(
@@ -289,7 +323,8 @@ class Pickup(smach.State, Logger):
         #             return self.grasp_failure(prompt=prompt)
 
         # self.hsrif.gripper.apply_force(0.6, delicate=is_delicate)
-        rospy.sleep(0.5)
+
+        # 移動姿勢にする
         self.move_joints.go()
 
         # ハンドを上に上げる
@@ -305,13 +340,5 @@ class Pickup(smach.State, Logger):
         # TODO: 把持チェック
 
         rospy.sleep(0.5)
-
-        # self.hsrif.whole_body.impedance_config = None
-
-        # neutoral_pose = joints.get_neutral_pose()
-        # self.hsrif.whole_body.move_to_joint_positions(neutoral_pose, sync=True)
-
-        # return "serve"
-
 
         return "move"
