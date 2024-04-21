@@ -23,6 +23,8 @@ class Wait4Start(smach.State, Logger):
         smach.State.__init__(self, outcomes=outcomes)
         Logger.__init__(self, loglevel="INFO")
 
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
+
     def wait_for_ready_msg(self, ready_msg="Are_you_ready?") -> None:
         """ready_for_messageの送信を待つ関数
         Args:
@@ -30,12 +32,17 @@ class Wait4Start(smach.State, Logger):
             defaults to Are_you_ready?
         """
         self.loginfo(f"wait for ready message: {ready_msg}")
+        is_wait_ready = rospy.get_param("/interactive_cleanup/wait_to_ready", True)
         while not rospy.is_shutdown():
-            break
+            if is_wait_ready is False:
+                break
             msg = rospy.wait_for_message("/interactive_cleanup/message/to_robot", InteractiveCleanupMsg, timeout=None)
             self.loginfo(msg.message)
             if msg.message == ready_msg:
                 self.logsuccess(f"Start task {ready_msg}")
+                pub_msg = InteractiveCleanupMsg()
+                pub_msg.message = "I_am_ready"
+                self.pub_to_moderator.publish(pub_msg)
                 break
         return
 
@@ -72,4 +79,5 @@ class Except(smach.State, Logger):
 
     def execute(self, userdata):
         self.logerr("Excepted")
-        return "except"
+        # return "except"
+        return "recovery"
