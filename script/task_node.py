@@ -77,7 +77,7 @@ class InteractiveCleanupStateMachine():
                 "Cleanup",
                 cleanup.CleanUp(["success", "loop", "except"]),
                 transitions={
-                    "success": "Finish",
+                    "success": "Init",
                     "loop": "Cleanup",
                     "except": "Except",
                 },

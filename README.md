@@ -31,6 +31,8 @@ roslaunch tam_object_detection hsr_head_rgbd_lang_sam_service.launch
 ```
 
 - Terminal 4
+  - Terminal 3のコマンドにて，langsamサーバを起動させてから実行する
+  - 最後のコマンドに `wait_to_ready:=false` が**含まれていない**ことを確認
 
 ```bash
 singularity shell -B /run/user/1000,/var/lib/dbus/machine-id --nv env/sandbox_sigverse/

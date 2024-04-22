@@ -7,6 +7,7 @@ from tamlib.utils import Logger
 from std_srvs.srv import SetBool, SetBoolRequest
 
 from interactive_cleanup.msg import InteractiveCleanupMsg
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 
 class Init(smach.State, Logger):
@@ -24,6 +25,8 @@ class Wait4Start(smach.State, Logger):
         Logger.__init__(self, loglevel="INFO")
 
         self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
+        self.inital_pose = rospy.Publisher("/initialpose", PoseWithCovarianceStamped, queue_size=5)
+        self.first_trial = True
 
     def wait_for_ready_msg(self, ready_msg="Are_you_ready?") -> None:
         """ready_for_messageの送信を待つ関数
@@ -46,8 +49,33 @@ class Wait4Start(smach.State, Logger):
                 break
         return
 
+    def set_inital_pose(self):
+        self.loginfo("set inital pose.")
+        msg = PoseWithCovarianceStamped()
+        msg.header.stamp = rospy.Time.now()
+        msg.header.frame_id = "map"
+        msg.pose.pose.position.x = 0
+        msg.pose.pose.position.y = 0
+        msg.pose.pose.position.z = 0
+        msg.pose.pose.orientation.x = 0
+        msg.pose.pose.orientation.y = 0
+        msg.pose.pose.orientation.z = 0
+        msg.pose.pose.orientation.w = 1
+        msg.pose.covariance = [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.06853892326654787]
+
     def execute(self, userdata):
         self.loginfo("I'm preparing to start.")
+
+        # 指差し位置の初期化
+        rospy.set_param("/interactive_cleanup/task/start", False)
+        rospy.set_param("/interactive_cleanup/pickup/point", 0)
+        rospy.set_param("/interactive_cleanup/cleanup/point", 0)
+
+        if True:
+            self.set_inital_pose()
+        else:
+            self.first_trial = False
+
         self.wait_for_ready_msg()
         return "next"
 

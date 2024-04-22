@@ -26,10 +26,14 @@ class RecogTargetPoint(smach.State, Logger):
         """
         self.loginfo("start focus node")
 
+        req = SetBoolRequest(True)
+        self.srv_focus_person_enable(req)
+        self.srv_pointing_estimation_enable(req)
+
         while not rospy.is_shutdown():
-            req = SetBoolRequest(True)
-            self.srv_focus_person_enable(req)
-            self.srv_pointing_estimation_enable(req)
+            # req = SetBoolRequest(True)
+            # self.srv_focus_person_enable(req)
+            # self.srv_pointing_estimation_enable(req)
             start_flag = rospy.get_param("/interactive_cleanup/task/start", False)
             if start_flag:
                 self.loginfo("stop focus node")

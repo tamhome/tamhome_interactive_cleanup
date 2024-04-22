@@ -36,7 +36,7 @@ class Pickup(smach.State, Logger):
             input_keys=[],
             output_keys=["status"]
         )
-        Logger.__init__(self, loglevel="DEBUG")
+        Logger.__init__(self, loglevel="INFO")
 
         self.detection_type = rospy.get_param("~detection_type", "lang_sam")
         self.grasp_from = rospy.get_param("~grasp_from", "floor")
@@ -57,10 +57,10 @@ class Pickup(smach.State, Logger):
             detection_service_name = "/hsr_head_rgbd/lang_sam/object_detection/service"
             self.srv_detection = rospy.ServiceProxy(detection_service_name, LangSamObjectDetectionService)
 
-        rospy.wait_for_service(detection_service_name, timeout=10)
+        rospy.wait_for_service(detection_service_name, timeout=100)
         self.loginfo("connected to object detection service")
         # self.prompt = "blue_tumbler. ketchup. ground_pepper. salt. sauce. soysauce. sugar. canned_juice. plastic_bottle. cubic_clock. bear_doll. dog_doll. rabbit_doll. toy_car. toy_penguin. toy_duck. nursing_bottle. apple. banana. cigarette. hourglass. rubik_cube. spray_bottle. game_controller. piggy_bank. matryoshka"
-        self.prompt = "small object"
+        self.prompt = "object"
 
         self.loop_counter = 0
 
@@ -163,12 +163,13 @@ class Pickup(smach.State, Logger):
                 max_distance=5.0,
                 use_latest_image=True,
             )
-            self.logdebug(det_req)
+            self.loginfo(det_req)
         else:
             det_req = LangSamObjectDetectionServiceRequest(use_latest_image=True, confidence_th=0.4, iou_th=0.4, prompt=self.prompt)
+            self.loginfo(det_req)
 
         detections = self.srv_detection(det_req).detections
-        self.logdebug(detections)
+        self.logtrace(detections)
         if detections.is_detected is False:
             # userdata.grasp_failure = True
             prompt = "grasp, not_detected, give_me, " + target_object_name
@@ -238,7 +239,7 @@ class Pickup(smach.State, Logger):
 
         # 把持姿勢に遷移
         grasp_pose_base_second = grasp_pose_base_pre
-        grasp_pose_base_second.position.z = grasp_pose_base_pre.position.z - 0.1
+        grasp_pose_base_second.position.z = grasp_pose_base_pre.position.z - 0.03
         res = self.moveit.move_to_pose(grasp_pose_base_second, self.base_frame)
         rospy.sleep(2)
 

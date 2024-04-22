@@ -11,6 +11,7 @@ import smach_ros
 import roslib.packages
 from typing import List
 from tamlib.utils import Logger
+from sigverse_hsrlib import MoveJoints
 
 from human_navigation.msg import HumanNaviMsg
 from human_navigation.msg import HumanNaviAvatarStatus
@@ -31,6 +32,11 @@ class CleanUp(smach.State, Logger):
             output_keys=["task_info"]
         )
         Logger.__init__(self, loglevel="INFO")
+        self.move_joint = MoveJoints()
 
     def execute(self, userdata):
+        rospy.sleep(4)
+        self.move_joint.gripper(3.14)
+        self.loginfo("complete interactive cleanup task!")
+
         return "success"
