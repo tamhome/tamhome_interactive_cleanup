@@ -62,6 +62,9 @@ class Wait4Start(smach.State, Logger):
         msg.pose.pose.orientation.z = 0
         msg.pose.pose.orientation.w = 1
         msg.pose.covariance = [0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.06853892326654787]
+        for _ in range(5):
+            self.inital_pose.publish(msg)
+            rospy.sleep(0.5)
 
     def execute(self, userdata):
         self.loginfo("I'm preparing to start.")
