@@ -80,7 +80,7 @@ class InteractiveCleanupStateMachine():
                 "Cleanup",
                 cleanup.CleanUp(["success", "loop", "except"]),
                 transitions={
-                    "success": "Init",
+                    "success": "Finish",
                     "loop": "Cleanup",
                     "except": "Except",
                 },
@@ -89,7 +89,7 @@ class InteractiveCleanupStateMachine():
             smach.StateMachine.add(
                 "Finish",
                 standard.Finish(["finish"]),
-                transitions={"finish": "exit"},
+                transitions={"finish": "Init"},
             )
             smach.StateMachine.add(
                 "Except",

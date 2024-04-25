@@ -97,9 +97,20 @@ class Finish(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
         Logger.__init__(self, loglevel="INFO")
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
     def execute(self, userdata):
         self.loginfo("Finished")
+        msg = InteractiveCleanupMsg()
+        msg.message = "Task_finished"
+        msg.detail = "Task_finished"
+        self.pub_to_moderator.publish(msg)
+
+        msg = InteractiveCleanupMsg()
+        msg.message = "Give_up"
+        msg.detail = "Give_up"
+        self.pub_to_moderator.publish(msg)
+
         return "finish"
 
 

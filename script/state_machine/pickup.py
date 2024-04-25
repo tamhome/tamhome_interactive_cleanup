@@ -20,9 +20,9 @@ from tamlib.tf import Transform, quaternion2euler, transform_pose, euler2quatern
 from std_msgs.msg import String
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Point, Pose, Quaternion
+from interactive_cleanup.msg import InteractiveCleanupMsg
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from tam_make_response.msg import MakeResponseAction, MakeResponseGoal, MakeResponseResult
-
 from std_srvs.srv import SetBool, SetBoolRequest
 # from tam_grasp.srv import GraspPoseEstimationService, GraspPoseEstimationServiceRequest
 from tam_object_detection.srv import LangSamObjectDetectionService, LangSamObjectDetectionServiceRequest
@@ -56,6 +56,8 @@ class Pickup(smach.State, Logger):
         else:
             detection_service_name = "/hsr_head_rgbd/lang_sam/object_detection/service"
             self.srv_detection = rospy.ServiceProxy(detection_service_name, LangSamObjectDetectionService)
+
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
         rospy.wait_for_service(detection_service_name, timeout=100)
         self.loginfo("connected to object detection service")
@@ -228,7 +230,11 @@ class Pickup(smach.State, Logger):
         #     prompt = "grasp, calculate_path, give_me, " + target_object_name
         #     return self.grasp_failure(prompt)
 
+        # 逆運動学をときやすい姿勢に変更
+        self.tam_move_joints.go()
+        rospy.sleep(2)
         self.move_joints.gripper(3.14)
+        rospy.sleep(1)
 
         # 把持前の姿勢に移動
         grasp_pose_base_pre = grasp_pose_base
@@ -254,6 +260,11 @@ class Pickup(smach.State, Logger):
         self.move_joints.go()
 
         # TODO: 把持チェック
+
+        msg = InteractiveCleanupMsg()
+        msg.message = "Object_grasped"
+        msg.detail = "Object_grasped"
+        self.pub_to_moderator.publish(msg)
 
         userdata.status = "clean_up"
         return "move"
