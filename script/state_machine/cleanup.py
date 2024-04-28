@@ -22,6 +22,7 @@ from human_navigation.msg import HumanNaviGuidanceMsg
 from human_navigation.msg import HumanNaviObjectStatus
 
 from geometry_msgs.msg import Point
+from interactive_cleanup.msg import InteractiveCleanupMsg
 
 
 class CleanUp(smach.State, Logger):
@@ -33,10 +34,18 @@ class CleanUp(smach.State, Logger):
         )
         Logger.__init__(self, loglevel="INFO")
         self.move_joint = MoveJoints()
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
     def execute(self, userdata):
         rospy.sleep(4)
         self.move_joint.gripper(3.14)
+        for _ in range(5):
+            msg = InteractiveCleanupMsg()
+            msg.message = "Task_finished"
+            msg.detail = "Task_finished"
+            self.pub_to_moderator.publish(msg)
+            rospy.sleep(0.2)
+
         self.loginfo("complete interactive cleanup task!")
 
         return "success"

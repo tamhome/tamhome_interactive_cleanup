@@ -7,7 +7,7 @@ import smach
 import smach_ros
 from tamlib.utils import Logger
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
-from handyman_msgs.msg import HandymanMsg
+from interactive_cleanup.msg import InteractiveCleanupMsg
 
 
 class TimeServer(Logger):
@@ -15,24 +15,29 @@ class TimeServer(Logger):
         Logger.__init__(self, loglevel="INFO")
 
         self.srv_change_init_state = rospy.ServiceProxy("/set/init_state", Trigger)
-        self.sub_moderator = rospy.Subscriber("/handyman/message/to_robot", HandymanMsg, callback=self.cb_timeup)
+        self.sub_moderator = rospy.Subscriber("/interactive_cleanup/message/to_robot", InteractiveCleanupMsg, callback=self.cb_timeup)
 
-    def cb_timeup(self, handyman_msg: HandymanMsg) -> None:
+    def cb_timeup(self, handyman_msg: InteractiveCleanupMsg) -> None:
+        self.loginfo(handyman_msg)
         message = handyman_msg.message
-        if message == "Time_up":
-            req = TriggerRequest()
-            self.srv_change_init_state(req)
+        detail = handyman_msg.detail
+
+        if message == "Task_failed":
+            if detail == "Time_is_up":
+                self.loginfo("send restart message")
+                req = TriggerRequest()
+                self.srv_change_init_state(req)
 
 
 if __name__ == "__main__":
     rospy.init_node(os.path.basename(__file__).split(".")[0])
-    loop_rate = rospy.get_param("~loop_rate", 30)
-    rate = rospy.loop_rate(loop_rate)
+    p_loop_rate = rospy.get_param("~loop_rate", 30)
+    loop_wait = rospy.Rate(p_loop_rate)
     cls = TimeServer()
 
     while not rospy.is_shutdown():
         try:
-            rospy.sleep(rate)
+            loop_wait.sleep()
         except rospy.exceptions.ROSException as e:
             rospy.logerr("[" + rospy.get_name() + "]: FAILURE")
             rospy.logerr("[" + rospy.get_name() + "]: " + str(e))

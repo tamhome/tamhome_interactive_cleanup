@@ -18,7 +18,7 @@ class InteractiveCleanupStateMachine():
         必要なモジュールを初期化
         """
         self.start_state = rospy.get_param("~start_state", "Start")
-        rospy.Service("/set/init_state", Trigger, self.cb_change_state)
+        rospy.Service("/set/init_state", Trigger, self.cb_set_state)
 
         # ステートマシンの宣言
         self.sm = smach.StateMachine(outcomes=["exit"])
@@ -108,7 +108,7 @@ class InteractiveCleanupStateMachine():
 
     def cb_set_state(self, req: TriggerRequest) -> TriggerResponse:
         target_state = "Except"
-        self.loginfo(f"[set_state] set inital state by timeout: {target_state}")
+        # self.loginfo(f"[set_state] set inital state by timeout: {target_state}")
         if self.sm.is_running():
             self.sm.request_preempt()
         self.sm.set_initial_state([target_state])
