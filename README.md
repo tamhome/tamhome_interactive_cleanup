@@ -5,13 +5,12 @@
 - Terminal 1
 
 ```bash
+cd usr/tamhome_ws
 singularity shell -B /run/user/1000,/var/lib/dbus/machine-id --nv env/sandbox_sigverse/
 source /entrypoint.sh
 source devel/setup.bash
-roslaunch interactive_cleanup teleop_key.launch
+roslaunch sigverse_hsrb_utils sigverse_ros_bridge.launch
 ```
-
-- Unityを起動
 
 - Terminal 2
 
@@ -19,11 +18,11 @@ roslaunch interactive_cleanup teleop_key.launch
 singularity shell -B /run/user/1000,/var/lib/dbus/machine-id --nv env/sandbox_sigverse/
 source /entrypoint.sh
 source devel/setup.bash
-roslaunch sigverse_hsrb_utils 
+roslaunch sigverse_hsrb_utils bring_up.launch
 ```
 
 - Terminal 3
-  - langsamのDocker化が終わるまではローカルで動作させる
+  - ローカルでの実行
 
 ```bash
 source devel/setup.bash

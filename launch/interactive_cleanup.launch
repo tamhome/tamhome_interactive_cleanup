@@ -20,6 +20,8 @@
         <param name="start_state" value="$(arg start_state)" />
     </node>
 
+    <!-- タイムアップを監視するサーバ -->
+    <node pkg="tamhome_interactive_cleanup" name="time_server" type="time_server.py" output="screen" />
 
     <!-- 指差し推定 -->
 

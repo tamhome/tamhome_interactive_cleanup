@@ -8,6 +8,8 @@ from std_srvs.srv import SetBool, SetBoolRequest
 
 from interactive_cleanup.msg import InteractiveCleanupMsg
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from sigverse_hsrlib import HSRBMoveIt
+from sigverse_hsrb_nav import HSRBNavigation
 
 
 class Init(smach.State, Logger):
@@ -27,6 +29,8 @@ class Wait4Start(smach.State, Logger):
         self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
         self.inital_pose = rospy.Publisher("/initialpose", PoseWithCovarianceStamped, queue_size=5)
         self.first_trial = True
+        self.moveit = HSRBMoveIt()
+        self.hsrb_nav = HSRBNavigation()
 
     def wait_for_ready_msg(self, ready_msg="Are_you_ready?") -> None:
         """ready_for_messageの送信を待つ関数
@@ -68,6 +72,8 @@ class Wait4Start(smach.State, Logger):
 
     def execute(self, userdata):
         self.loginfo("I'm preparing to start.")
+        self.moveit.delete()
+        self.hsrb_nav.cancel_goal()
 
         # 指差し位置の初期化
         rospy.set_param("/interactive_cleanup/task/start", False)
@@ -97,9 +103,20 @@ class Finish(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(self, outcomes=outcomes)
         Logger.__init__(self, loglevel="INFO")
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
     def execute(self, userdata):
         self.loginfo("Finished")
+        msg = InteractiveCleanupMsg()
+        msg.message = "Task_finished"
+        msg.detail = "Task_finished"
+        self.pub_to_moderator.publish(msg)
+
+        msg = InteractiveCleanupMsg()
+        msg.message = "Give_up"
+        msg.detail = "Give_up"
+        self.pub_to_moderator.publish(msg)
+
         return "finish"
 
 

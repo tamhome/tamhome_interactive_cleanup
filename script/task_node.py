@@ -6,8 +6,10 @@ import rospy
 import smach
 import smach_ros
 
+from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
+
 from state_machine import standard
-from state_machine import pickup, recog_target_point, recognition, move, cleanup
+from state_machine import pickup, recog_target_point, move, cleanup
 
 
 class InteractiveCleanupStateMachine():
@@ -16,6 +18,7 @@ class InteractiveCleanupStateMachine():
         必要なモジュールを初期化
         """
         self.start_state = rospy.get_param("~start_state", "Start")
+        rospy.Service("/set/init_state", Trigger, self.cb_set_state)
 
         # ステートマシンの宣言
         self.sm = smach.StateMachine(outcomes=["exit"])
@@ -77,7 +80,7 @@ class InteractiveCleanupStateMachine():
                 "Cleanup",
                 cleanup.CleanUp(["success", "loop", "except"]),
                 transitions={
-                    "success": "Init",
+                    "success": "Finish",
                     "loop": "Cleanup",
                     "except": "Except",
                 },
@@ -86,7 +89,7 @@ class InteractiveCleanupStateMachine():
             smach.StateMachine.add(
                 "Finish",
                 standard.Finish(["finish"]),
-                transitions={"finish": "exit"},
+                transitions={"finish": "Init"},
             )
             smach.StateMachine.add(
                 "Except",
@@ -102,6 +105,15 @@ class InteractiveCleanupStateMachine():
 
     def run(self) -> None:
         self.sm.execute()
+
+    def cb_set_state(self, req: TriggerRequest) -> TriggerResponse:
+        target_state = "Except"
+        # self.loginfo(f"[set_state] set inital state by timeout: {target_state}")
+        if self.sm.is_running():
+            self.sm.request_preempt()
+        self.sm.set_initial_state([target_state])
+        self.sm.execute()
+        return TriggerResponse(success=True, message=f"State machine reset to {target_state}")
 
 
 def main():

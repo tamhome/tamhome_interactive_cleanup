@@ -20,13 +20,14 @@ from tamlib.tf import Transform, quaternion2euler, transform_pose, euler2quatern
 from std_msgs.msg import String
 from geometry_msgs.msg import TransformStamped
 from geometry_msgs.msg import Point, Pose, Quaternion
+from interactive_cleanup.msg import InteractiveCleanupMsg
 from sensor_msgs.msg import Image, CompressedImage, CameraInfo
 from tam_make_response.msg import MakeResponseAction, MakeResponseGoal, MakeResponseResult
-
 from std_srvs.srv import SetBool, SetBoolRequest
 # from tam_grasp.srv import GraspPoseEstimationService, GraspPoseEstimationServiceRequest
 from tam_object_detection.srv import LangSamObjectDetectionService, LangSamObjectDetectionServiceRequest
 from tam_object_detection.srv import ObjectDetectionService, ObjectDetectionServiceRequest
+from tamhome_skills import Grasp
 
 
 class Pickup(smach.State, Logger):
@@ -44,6 +45,7 @@ class Pickup(smach.State, Logger):
         self.moveit = HSRBMoveIt()
         self.tamtf = Transform()
         self.move_joints = MoveJoints()
+        self.tam_grasp = Grasp()
 
         self.head_rgbd_frame = "head_rgbd_sensor_link"
         self.base_frame = "odom"
@@ -56,6 +58,8 @@ class Pickup(smach.State, Logger):
         else:
             detection_service_name = "/hsr_head_rgbd/lang_sam/object_detection/service"
             self.srv_detection = rospy.ServiceProxy(detection_service_name, LangSamObjectDetectionService)
+
+        self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
         rospy.wait_for_service(detection_service_name, timeout=100)
         self.loginfo("connected to object detection service")
@@ -152,7 +156,8 @@ class Pickup(smach.State, Logger):
         # 首を下に向ける
         self.move_joints.go()
         rospy.sleep(2)
-        self.move_joints.move_head(0, -0.4)
+        offset = np.random.uniform(-0.1, 0.1)
+        self.move_joints.move_head(0, -0.5+offset)
         rospy.sleep(2)
 
         # object detection
@@ -165,7 +170,13 @@ class Pickup(smach.State, Logger):
             )
             self.loginfo(det_req)
         else:
-            det_req = LangSamObjectDetectionServiceRequest(use_latest_image=True, confidence_th=0.4, iou_th=0.4, prompt=self.prompt)
+            det_req = LangSamObjectDetectionServiceRequest(
+                use_latest_image=True,
+                confidence_th=0.4,
+                iou_th=0.4,
+                prompt=self.prompt,
+                max_distance=5.0,
+            )
             self.loginfo(det_req)
 
         detections = self.srv_detection(det_req).detections
@@ -176,27 +187,9 @@ class Pickup(smach.State, Logger):
             return self.grasp_failure(prompt=prompt)
 
         # 目標位置に最も近いオブジェクトを探索
+        self.loginfo(detections)
         target_idx = self.calc_nearest_object(target_point, detections.pose)
 
-        # max_score_idx = None
-        # max_score = -1
-        # for i, box in enumerate(detections.bbox):
-        #     if box.name != target_object_name:
-        #         continue
-        #     score = box.score
-        #     if score > max_score:
-        #         max_score = score
-        #         max_score_idx = i
-        # if max_score_idx is None:
-        #     self.loop_counter += 1
-        #     if self.loop_counter > 30:
-        #         self.loop_counter = 0
-        #         prompt = "grasp, not_found, give_me, " + target_object_name
-        #         return self.grasp_failure(prompt)
-        #     else:
-        #         return "loop"
-
-        self.loginfo(detections.bbox[target_idx].name)
         # grasp pose estimation
         open_angle = 1.2
         grasp_pose = Pose(
@@ -212,36 +205,36 @@ class Pickup(smach.State, Logger):
 
         self.loginfo(grasp_pose_base)
 
-        # self.loginfo(detections.pose[max_score_idx].frame_id)
-
-        # TODO: 把持点推定を導入
-        # gpe_req = GraspPoseEstimationServiceRequest(
-        #     depth=detections.depth,
-        #     mask=detections.segments[max_score_idx],
-        #     pose=pose,
-        #     camera_frame_id=detections.pose[max_score_idx].frame_id,
-        #     frame_id=self.description.frame.base,
-        # )
-        # gpe_res = self.srv_grasp(gpe_req)
-        # if gpe_res.success is False:
-        #     userdata.grasp_failure = True
-        #     prompt = "grasp, calculate_path, give_me, " + target_object_name
-        #     return self.grasp_failure(prompt)
-
         self.move_joints.gripper(3.14)
+        rospy.sleep(1)
 
-        # 把持前の姿勢に移動
-        grasp_pose_base_pre = grasp_pose_base
-        grasp_pose_base_pre.position.z = grasp_pose_base.position.z + 0.1
-        grasp_pose_base_pre.orientation = euler2quaternion(0, -1.57, np.pi)
-        res = self.moveit.move_to_pose(grasp_pose_base_pre, self.base_frame)
-        rospy.sleep(2)
+        use_moveit = False
+        if use_moveit:
+            # 把持前の姿勢に移動
+            grasp_pose_base_pre = grasp_pose_base
+            grasp_pose_base_pre.position.z = grasp_pose_base.position.z + 0.1
+            # grasp_pose_base_pre.orientation = euler2quaternion(0, -1.57, np.pi)
+            grasp_pose_base_pre.orientation = euler2quaternion(3.14, 0, 0)
+            res = self.moveit.move_to_pose(grasp_pose_base_pre, self.base_frame)
+            rospy.sleep(2)
 
-        # 把持姿勢に遷移
-        grasp_pose_base_second = grasp_pose_base_pre
-        grasp_pose_base_second.position.z = grasp_pose_base_pre.position.z - 0.03
-        res = self.moveit.move_to_pose(grasp_pose_base_second, self.base_frame)
-        rospy.sleep(2)
+            # 把持姿勢に遷移
+            grasp_pose_base_second = grasp_pose_base_pre
+            grasp_pose_base_second.position.z = grasp_pose_base_pre.position.z - 0.03
+            res = self.moveit.move_to_pose(grasp_pose_base_second, self.base_frame)
+            rospy.sleep(2)
+        else:
+            default_grasp_joint = [0.0, -2.30, 0.0, 0.73, 0.0]
+            self.move_joints.move_arm_by_pose(
+                default_grasp_joint[0],
+                default_grasp_joint[1],
+                default_grasp_joint[2],
+                default_grasp_joint[3],
+                default_grasp_joint[4],
+            )
+            rospy.sleep(2.5)
+            self.tam_grasp._set_z_axis(pose_odom=grasp_pose_base, grasp_type="front", tolerance=0.03)
+            self.tam_grasp._set_xy_axis(pose_odom=grasp_pose_base, grasp_type="front")
 
         # 把持
         self.move_joints.gripper(0)
@@ -252,8 +245,26 @@ class Pickup(smach.State, Logger):
 
         # 移動姿勢にする
         self.move_joints.go()
+        rospy.sleep(7)
 
         # TODO: 把持チェック
+        self.tam_grasp.grasp_check()
+
+        msg = InteractiveCleanupMsg()
+        msg.message = "Object_grasped"
+        msg.detail = "Object_grasped"
+        self.pub_to_moderator.publish(msg)
+
+        try:
+            msg = rospy.wait_for_message("/interactive_cleanup/message/to_robot", InteractiveCleanupMsg, timeout=1)
+            if msg.message == "Task_failed":
+                return "except"
+            else:
+                self.logsuccess("I can grasp correct object!")
+        except Exception as e:
+            self.logwarn(e)
+            pass
+
 
         userdata.status = "clean_up"
         return "move"
