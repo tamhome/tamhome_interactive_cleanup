@@ -168,7 +168,7 @@ class Pickup(smach.State, Logger):
                 max_distance=5.0,
                 use_latest_image=True,
             )
-            self.loginfo(det_req)
+            self.logtrace(det_req)
         else:
             det_req = LangSamObjectDetectionServiceRequest(
                 use_latest_image=True,
@@ -177,7 +177,7 @@ class Pickup(smach.State, Logger):
                 prompt=self.prompt,
                 max_distance=5.0,
             )
-            self.loginfo(det_req)
+            self.logtrace(det_req)
 
         detections = self.srv_detection(det_req).detections
         self.logtrace(detections)
@@ -187,7 +187,7 @@ class Pickup(smach.State, Logger):
             return self.grasp_failure(prompt=prompt)
 
         # 目標位置に最も近いオブジェクトを探索
-        self.loginfo(detections)
+        self.logtrace(detections)
         target_idx = self.calc_nearest_object(target_point, detections.pose)
 
         # grasp pose estimation

@@ -4,6 +4,7 @@
 import os
 import rospy
 import smach
+import rosnode
 import smach_ros
 
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
@@ -107,12 +108,21 @@ class InteractiveCleanupStateMachine():
         self.sm.execute()
 
     def cb_set_state(self, req: TriggerRequest) -> TriggerResponse:
-        target_state = "Except"
-        # self.loginfo(f"[set_state] set inital state by timeout: {target_state}")
-        if self.sm.is_running():
-            self.sm.request_preempt()
-        self.sm.set_initial_state([target_state])
-        self.sm.execute()
+        # target_state = "Except"
+        # # self.loginfo(f"[set_state] set inital state by timeout: {target_state}")
+        # if self.sm.is_running():
+        #     self.sm.request_preempt()
+        # self.sm.set_initial_state([target_state])
+        # self.sm.execute()
+
+        rospy.sleep(2)
+
+        node_name = "/pointing_estimation"
+        rosnode.kill_nodes([node_name])
+        rospy.sleep(2)
+
+        node_name = "/state_machine"
+        rosnode.kill_nodes([node_name])
         return TriggerResponse(success=True, message=f"State machine reset to {target_state}")
 
 
