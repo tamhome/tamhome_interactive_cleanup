@@ -18,15 +18,15 @@ class TimeServer(Logger):
         self.sub_moderator = rospy.Subscriber("/interactive_cleanup/message/to_robot", InteractiveCleanupMsg, callback=self.cb_timeup)
 
     def cb_timeup(self, handyman_msg: InteractiveCleanupMsg) -> None:
-        self.loginfo(handyman_msg)
+        self.logdebug(handyman_msg)
         message = handyman_msg.message
         detail = handyman_msg.detail
 
         if message == "Task_failed":
-            if detail == "Time_is_up":
-                self.loginfo("send restart message")
-                req = TriggerRequest()
-                self.srv_change_init_state(req)
+            # if detail == "Time_is_up":
+            self.loginfo("send restart message")
+            req = TriggerRequest()
+            self.srv_change_init_state(req)
 
 
 if __name__ == "__main__":

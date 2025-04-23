@@ -30,6 +30,14 @@ roslaunch tam_object_detection hsr_head_rgbd_lang_sam_service.launch
 ```
 
 - Terminal 4
+  - ローカルでの実行
+
+```bash
+source devel/setup.bash
+roslaunch tam_mmaction2 simple_test.launch is_sigverse:=true max_distance:=0
+```
+
+- Terminal 5
   - Terminal 3のコマンドにて，langsamサーバを起動させてから実行する
   - 最後のコマンドに `wait_to_ready:=false` が**含まれていない**ことを確認
 

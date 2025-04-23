@@ -3,6 +3,8 @@
 
 import rospy
 import smach
+import rosnode
+
 from tamlib.utils import Logger
 from std_srvs.srv import SetBool, SetBoolRequest
 
@@ -116,6 +118,14 @@ class Finish(smach.State, Logger):
         msg.message = "Give_up"
         msg.detail = "Give_up"
         self.pub_to_moderator.publish(msg)
+        rospy.sleep(2)
+
+        node_name = "/pointing_estimation"
+        rosnode.kill_nodes([node_name])
+        rospy.sleep(2)
+
+        node_name = "/state_machine"
+        rosnode.kill_nodes([node_name])
 
         return "finish"
 

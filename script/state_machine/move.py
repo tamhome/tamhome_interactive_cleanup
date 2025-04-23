@@ -23,6 +23,7 @@ from geometry_msgs.msg import Twist
 from interactive_cleanup.msg import InteractiveCleanupMsg
 from tamlib.tf import Transform, euler2quaternion
 
+
 class Move(smach.State, Logger):
     def __init__(self, outcomes):
         smach.State.__init__(
@@ -197,7 +198,7 @@ class Move(smach.State, Logger):
                 cleanup_target_furniture = rospy.get_param("/interactive_cleanup/cleanup/target_furniture", "floor")
                 cleanup_point = rospy.get_param("/interactive_cleanup/cleanup/point", [3.25, -2.83, 0.7])
 
-                self.loginf(f"recognized target furniture is {cleanup_target_furniture}")
+                self.loginfo(f"recognized target furniture is {cleanup_target_furniture}")
                 if cleanup_target_furniture == "floor":
                     try:
                         cleanup_target_furniture = "cardboard_box"
@@ -226,6 +227,7 @@ class Move(smach.State, Logger):
                     joint = self.move_point[cleanup_target_furniture]["joint"]
                     target_tf = self.move_point[cleanup_target_furniture]["tf"]
             except Exception as e:
+                self.logwarn(e)
                 self.logwarn("対象の家具は見つかりませんでした．デフォルトの場所に片付けます．")
                 cleanup_target_furniture = "cardboard_box"
                 navigation_goal = self.move_point[cleanup_target_furniture]["nav_pose"]
