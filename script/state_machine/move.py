@@ -21,7 +21,9 @@ from sigverse_hsrlib import HSRBMoveIt
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from geometry_msgs.msg import Twist
 from interactive_cleanup.msg import InteractiveCleanupMsg
+
 from tamlib.tf import Transform, euler2quaternion
+from tamhome_skills import Grasp
 
 
 class Move(smach.State, Logger):
@@ -71,7 +73,7 @@ class Move(smach.State, Logger):
             "white_side_table#1": {
                 "nav_pose": Pose2D(x=0.98, y=-1.95, theta=-1.57),
                 "joint": [0.1, -0.9, 0.0, -0.65, 0.0],
-                "tf": [4.45, -1.02, 0.7]
+                "tf": [1.25, -2.67, 0.7]
             },
             "trash_box_for_bottle_can": {
                 "nav_pose": Pose2D(x=-0.88, y=-1.05, theta=-3.14),
@@ -93,6 +95,8 @@ class Move(smach.State, Logger):
         # self._pub_omni_base_controller = rospy.Publisher("/hsrb/omni_base_controller/command", JointTrajectory, queue_size=1)
         self._pub_base_rot = rospy.Publisher('/hsrb/command_velocity', Twist, queue_size=1)
         self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
+
+        self.tam_grasp = Grasp()
 
     def calculate_distance(self, pose1: Pose, pose2: Pose) -> float:
         """
@@ -249,7 +253,20 @@ class Move(smach.State, Logger):
                 pose_stamped.orientation.z = orientation[2]
                 pose_stamped.orientation.w = orientation[3]
 
-                self.moveit.move_to_pose(pose_stamped)
+                default_grasp_joint = [0.5, -1.57, 0.0, 0.0, 0.0]
+                self.move_joint.move_arm_by_pose(
+                    default_grasp_joint[0],
+                    default_grasp_joint[1],
+                    default_grasp_joint[2],
+                    default_grasp_joint[3],
+                    default_grasp_joint[4],
+                )
+
+                rospy.sleep(2.5)
+                self.tam_grasp._set_z_axis(pose_odom=pose_stamped, grasp_type="front", tolerance=0.03)
+                self.tam_grasp._set_xy_axis(pose_odom=pose_stamped, grasp_type="front")
+
+                # self.moveit.move_to_pose(pose_stamped)
                 self.move_joint.gripper(3.14)
                 rospy.sleep(5)
 
