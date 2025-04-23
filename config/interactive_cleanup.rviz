@@ -25,7 +25,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: ""
+    SyncSource: Head RGB
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -444,7 +444,7 @@ Visualization Manager:
       Marker Topic: /pointing_estimation/pointing_position
       Name: Pointing Position
       Namespaces:
-        {}
+        pointing_position: true
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -452,7 +452,7 @@ Visualization Manager:
       Marker Topic: /pointing_estimation/pointing_line
       Name: Pointing Line
       Namespaces:
-        {}
+        pointing_line: true
       Queue Size: 100
       Value: true
     - Class: rviz/MarkerArray
@@ -460,7 +460,25 @@ Visualization Manager:
       Marker Topic: /mmaction2/action_estimation/skeleton
       Name: Human Skelton
       Namespaces:
-        {}
+        left_ankle2left_knee: true
+        left_ear2left_shoulder: true
+        left_elbow2left_wrist: true
+        left_eye2left_ear: true
+        left_eye2right_eye: true
+        left_hip2right_hip: true
+        left_knee2left_hip: true
+        left_shoulder2left_elbow: true
+        left_shoulder2left_hip: true
+        left_shoulder2right_shoulder: true
+        nose2left_eye: true
+        nose2right_eye: true
+        right_ankle2right_knee: true
+        right_ear2right_shoulder: true
+        right_elbow2right_wrist: true
+        right_eye2right_ear: true
+        right_knee2right_hip: true
+        right_shoulder2right_elbow: true
+        right_shoulder2right_hip: true
       Queue Size: 100
       Value: true
   Enabled: true
@@ -491,7 +509,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 7.94722843170166
+      Distance: 9.82544994354248
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -499,17 +517,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.7229359149932861
-        Y: 0.3953031897544861
-        Z: 0.20569150149822235
+        X: 0.829190194606781
+        Y: 0.4327459931373596
+        Z: 0.28200671076774597
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7603969573974609
+      Pitch: 0.9753967523574829
       Target Frame: <Fixed Frame>
-      Yaw: 3.865398406982422
+      Yaw: 3.480393171310425
     Saved: ~
 Window Geometry:
   Displays:
@@ -535,5 +553,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1535
-  X: 1270
-  Y: 206
+  X: 136
+  Y: 283
