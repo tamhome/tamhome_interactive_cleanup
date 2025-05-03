@@ -62,7 +62,7 @@ class Pickup(smach.State, Logger):
         self.pub_to_moderator = rospy.Publisher("/interactive_cleanup/message/to_moderator", InteractiveCleanupMsg, queue_size=5)
 
         rospy.wait_for_service(detection_service_name, timeout=100)
-        self.loginfo("connected to object detection service")
+        self.logsuccess("connected to object detection service")
         # self.prompt = "blue_tumbler. ketchup. ground_pepper. salt. sauce. soysauce. sugar. canned_juice. plastic_bottle. cubic_clock. bear_doll. dog_doll. rabbit_doll. toy_car. toy_penguin. toy_duck. nursing_bottle. apple. banana. cigarette. hourglass. rubik_cube. spray_bottle. game_controller. piggy_bank. matryoshka"
         self.prompt = "object"
 
@@ -170,6 +170,7 @@ class Pickup(smach.State, Logger):
             )
             self.logtrace(det_req)
         else:
+            self.loginfo("send object detection service request")
             det_req = LangSamObjectDetectionServiceRequest(
                 use_latest_image=True,
                 confidence_th=0.4,

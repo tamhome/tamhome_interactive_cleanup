@@ -26,10 +26,10 @@
     <!-- 指差し推定 -->
 
     <!-- 人物認識 -->
-    <!-- <include file="$(find tam_mmaction2)/launch/simple_test.launch">
+    <include file="$(find tam_mmaction2)/launch/simple_test.launch">
         <arg name="is_sigverse" value="$(arg is_sigverse)"/>
         <arg name="max_distance" value="$(arg human_max_distance)"/>
-    </include> -->
+    </include>
 
     <!-- 人に注目 -->
     <node pkg="tamhome_pointing_estimation" type="focus_person.py" name="focus_person_node" output="screen" respawn="true"/>
